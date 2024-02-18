@@ -3,7 +3,6 @@ Shader "Custom/DepthAndNormalsVisualizer"
     Properties
     {
         _MainTex ("Texture", 2D) = "white" {}
-        _Mode ("Visualization Mode (0: Depth, 1: Normals, 2: Texture, 3: Fog, 4: Reflections1, 5: Reflections2, 6: Reflections3)", Float) = 0
         _MaxSteps ("_MaxSteps", Int) = 10
         _StepSize ("_StepSize", Float) = 0.1
         _DepthHit ("_DepthHit", Float) = 0.1
@@ -46,7 +45,6 @@ Shader "Custom/DepthAndNormalsVisualizer"
             sampler2D _CameraGBufferTexture0;
             sampler2D _CameraGBufferTexture1;
 
-            float _Mode;
             int _MaxSteps;
             float _IsRectangular;
             float _TestNumber;
@@ -98,7 +96,7 @@ Shader "Custom/DepthAndNormalsVisualizer"
 
 
                 // Преобразование нормали из пространства вида в мировое пространство
-                float3 normalInWorldSpace = mul((float3x3)unity_CameraToWorld, initialNormal);
+                float3 normalInWorldSpace = mul((float3x3)unity_WorldToCamera, initialNormal);
                 //unity_WorldToCamera is unity prefefined const for that - _CameraToWorldMatrix = unity_WorldToCamera
 
                 initialNormal = normalInWorldSpace;

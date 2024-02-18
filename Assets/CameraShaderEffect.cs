@@ -1,21 +1,14 @@
+using UnityEditor;
+#if UNITY_EDITOR
 using UnityEngine;
+#endif
 
 [ExecuteInEditMode]
 public class CameraShaderEffect : MonoBehaviour
 {
-    public enum VisualizationMode
-    {
-        Depth,
-        Normals,
-        Texture,
-        Fog,
-        Reflections1,
-        Specular,
-        Reflections2,
-        Reflections3,
-    }
-
-    public VisualizationMode Mode = VisualizationMode.Depth;
+    
+    
+    
     private Material _material;
     public Camera cam;
 
@@ -58,6 +51,7 @@ public class CameraShaderEffect : MonoBehaviour
         }
     }
 
+
     void SetVariables()
     {
         if (cam == null)
@@ -67,7 +61,6 @@ public class CameraShaderEffect : MonoBehaviour
 
 
         // Устанавливаем режим визуализации в шейдере
-        _material.SetFloat("_Mode", (float)Mode);
         _material.SetInt("_MaxSteps", _MaxSteps);
         _material.SetFloat("_StepSize", (_StepSize / 100));
         _material.SetFloat("_DepthHit", _DepthHit / 100);
