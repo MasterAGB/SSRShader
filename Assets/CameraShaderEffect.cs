@@ -38,7 +38,7 @@ public class CameraShaderEffect : MonoBehaviour
 
 
     [Min(0.001f)] public float _DepthHit = 1;
-    [Range(0, 30)] public int _MaxSteps = 30;
+    [Range(0, 60)] public int _MaxSteps = 60;
 
     public float _StepSize = 0.01f;
     public float _TestNumber = 1;
@@ -52,7 +52,6 @@ public class CameraShaderEffect : MonoBehaviour
     {
         if (_material != null)
         {
-            
             SetVariables();
         }
     }
@@ -84,11 +83,11 @@ public class CameraShaderEffect : MonoBehaviour
             _material.SetTexture("_CameraGBufferTexture0", null);
         }
         //_material.SetTexture("_CameraGBufferTexture1", Shader.GetGlobalTexture("_CameraGBufferTexture1"));
-        
+
         _material.SetVector("_CameraWorldPos", cam.transform.position);
         _material.SetFloat("_CameraFOV", cam.fieldOfView);
-        
-        
+
+
         _material.SetMatrix("_InvProjMatrix", cam.projectionMatrix.inverse);
         _material.SetMatrix("_ProjMatrix", cam.projectionMatrix);
         _material.SetMatrix("_InvViewProjMatrix", (cam.projectionMatrix * cam.worldToCameraMatrix).inverse);

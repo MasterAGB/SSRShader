@@ -53,6 +53,7 @@ Shader "Custom/DepthAndNormalsVisualizer"
             float _TestNumber2;
             float _StepSize;
             float _CameraFarPlane;
+            float4x4 _CameraToWorldMatrix;
             float _DepthHit;
 
 
@@ -88,6 +89,20 @@ Shader "Custom/DepthAndNormalsVisualizer"
                 return modifiedRay;
             }
 
+            float3 GetInitialNormal(float2 uv)
+            {
+                //normalInViewSpace -// Получение нормали из текстуры нормалей 
+                float3 initialNormal = normalize(tex2D(_CameraNormalsTexture, uv).xyz * 2.0 - 1.0);
+
+
+                // Преобразование нормали из пространства вида в мировое пространство
+                float3 normalInWorldSpace = mul((float3x3)unity_CameraToWorld, initialNormal);
+                //unity_WorldToCamera is unity prefefined const for that - _CameraToWorldMatrix = unity_WorldToCamera
+
+                initialNormal = normalInWorldSpace;
+                return initialNormal;
+            }
+
             fixed4 frag(v2f i) : SV_Target
             {
                 /**** Start of my Shader ***/
@@ -102,9 +117,19 @@ Shader "Custom/DepthAndNormalsVisualizer"
                     return initialColor;
                 }
 
-                // Простейшая демонстрация "трассировки луча" для screen-space отражений
-                float3 initialNormal = normalize(tex2D(_CameraNormalsTexture, i.uv).xyz * 2.0 - 1.0);
-                // Получаем нормаль
+
+                float3 initialNormal = GetInitialNormal(i.uv);
+
+
+                // Преобразование нормали из пространства вида в мировое пространство
+                float3 normalInWorldSpace = mul((float3x3)unity_CameraToWorld, initialNormal); //_CameraToWorldMatrix = 
+
+                initialNormal = normalInWorldSpace;
+
+                //i have this initialnormal - but i wanna it to be mulriplied by cameras rotation, so in my shader i think, that normal is rotated towards me, even if it is rotated backwards from camera, but camera is facing back. understand? so i can also track correctly the normals, when i rotate camera back:
+
+
+                // Получаем нормаль                
                 float initialDepth = Linear01Depth(tex2D(_CameraDepthTexture, i.uv).r); // Получаем глубину
                 float3 viewRay = (float3(i.uv * 2.0 - 1.0, initialDepth)); // Создаем луч взгляда
 
@@ -131,32 +156,53 @@ Shader "Custom/DepthAndNormalsVisualizer"
                     float isDeepMultiply = abs(initialNormal.z) > rectangularThreshhold ? 0 : 1;
                     // Это условие проверяет, насколько "Z" нормаль
 
-                  
 
                     viewRayNormalized *= float3(isVerticalMultiply, isHorizontalMultiply, isDeepMultiply);
                     if (abs(initialNormal.y) > rectangularThreshhold)
                     {
-                        viewRayNormalized.y *=_TestNumber;
-                        viewRayNormalized.z *=_TestNumber2;
+                        viewRayNormalized.y *= _TestNumber;
+                        viewRayNormalized.z *= _TestNumber2;
                     }
                     if (abs(initialNormal.x) > rectangularThreshhold)
                     {
-                        viewRayNormalized.x *=_TestNumber;
-                        viewRayNormalized.z *=_TestNumber2;
+                        viewRayNormalized.x *= _TestNumber;
+                        viewRayNormalized.z *= _TestNumber2;
                     }
                     if (abs(initialNormal.z) > rectangularThreshhold)
                     {
-                        viewRayNormalized.x *=_TestNumber2;
-                        viewRayNormalized.y *=_TestNumber2;
+                        viewRayNormalized.x *= _TestNumber2;
+                        viewRayNormalized.y *= _TestNumber2;
                     }
 
-
-                    
 
                     if (_TestNumber > 0.5f)
                     {
                         //viewRayNormalized = normalize(viewRayNormalized);
                     }
+                }
+                else
+                {
+                    // Входной вектор: inputVector.x, inputVector.y от -1 до 1, inputVector.z от 0 до 1
+
+                    float3 input_vector = viewRayNormalized;
+                    // Простая аппроксимация для сдвига в зависимости от расстояния до центра
+                    float distanceFromCenter = sqrt(input_vector.x * input_vector.x + input_vector.y * input_vector.y);
+
+                    // Вычисляем сдвиг для x и y
+                    float shiftScale = 0.5; // Масштаб сдвига, подберите подходящее значение
+                    float shiftX = input_vector.x * shiftScale * distanceFromCenter;
+                    float shiftY = input_vector.y * shiftScale * distanceFromCenter;
+
+                    // Для глубины используем линейное уменьшение от 0 до -1, увеличивая "драматичность" с расстоянием
+                    // Можете адаптировать этот масштаб, чтобы глубина уходила дальше в минус, если нужно
+                    float depthShiftScale = 2.0; // Масштаб сдвига глубины
+                    float shiftedDepth = -input_vector.z * depthShiftScale * distanceFromCenter;
+
+                    // Комбинируем результат
+                    float4 transformedVector = float4(input_vector.x + shiftX, input_vector.y + shiftY, shiftedDepth,
+  1.0);
+
+                    viewRayNormalized = transformedVector;
                 }
 
                 float3 reflectedRay = reflect(viewRayNormalized, initialNormal); // Отражаем луч от поверхности
@@ -183,14 +229,15 @@ Shader "Custom/DepthAndNormalsVisualizer"
 
 
                     float currentDepthNormal = Linear01Depth(tex2D(_CameraDepthTexture, currentUV.xy).r);
-                    float oneMeterPixelDepth = (255.0 / _ProjectionParams.z) / 255.0; //We dont use FAR_PLANE, stuff is in _ProjectionParams!
+                    float oneMeterPixelDepth = (255.0 / _ProjectionParams.z) / 255.0;
+                    //We dont use FAR_PLANE, stuff is in _ProjectionParams!
                     float depthOffset = _StepSize * step * reflectedRay.z * oneMeterPixelDepth;
-                    float currentDepth3D = currentDepthNormal  * oneMeterPixelDepth;
-                    float initialDepth3D = initialDepth  * oneMeterPixelDepth;
+                    float currentDepth3D = currentDepthNormal * oneMeterPixelDepth;
+                    float initialDepth3D = initialDepth * oneMeterPixelDepth;
                     float assumedDepth3D = initialDepth3D + depthOffset;
                     float depthDifference = abs(currentDepth3D - assumedDepth3D);
 
-                    
+
                     // Преобразование UV координат в экранные координаты (в пикселях)
                     float2 initialScreenPos = i.uv * float2(_ScreenParams.x, _ScreenParams.y);
                     float2 currentScreenPos = currentUV * float2(_ScreenParams.x, _ScreenParams.y);
@@ -215,8 +262,6 @@ Shader "Custom/DepthAndNormalsVisualizer"
                     }
 
 
-
-
                     //HERE We must check, if the Depth at least is not BEHIND the ferlected ray.. So if reflectedRay goes forward, means, we dont accept depth, that is behind..
                     //It will help not to reflect object itself, when the ray reflects right in the camera
                     //Для реализации этой логики в вашем TODO разделе, вам нужно сравнить currentDepth (текущая глубина в точке, куда указывает отраженный луч) с initialDepth (глубина в точке отражения). Однако, просто использовать разницу между этими значениями недостаточно, так как вам также необходимо учесть направление луча относительно камеры.
@@ -237,7 +282,10 @@ Shader "Custom/DepthAndNormalsVisualizer"
                     }
 
 
-                    float3 currentNormal = normalize(tex2D(_CameraNormalsTexture, currentUV.xy).xyz * 2.0 - 1.0);
+                    //instead of getting just the normal - we also normalize it towards camera
+                    //float3 currentNormal = normalize(tex2D(_CameraNormalsTexture, currentUV.xy).xyz * 2.0 - 1.0);
+                    float3 currentNormal = GetInitialNormal(currentUV.xy);
+
                     //now we have to check, if we are not trying to reflect the object, that actually has normale, that is not able to be reflected, because it faces kinda same direction, not opposize..
                     //So we have to check, if the RAY - reflectedRay is facing kinda not same direction as this currentNormale, right? currentNormal
                     // Проверяем направление отраженного луча и нормали текущей точки
@@ -249,7 +297,7 @@ Shader "Custom/DepthAndNormalsVisualizer"
                     {
                         continue;
                     }
-                    
+
 
                     // Если находим поверхность ближе к камере, чем начальная точка + некий порог, считаем, что произошло столкновение
                     if (depthDifference <= _DepthHit)
