@@ -51,6 +51,8 @@ Shader "Custom/DepthAndNormalsVisualizer"
             float _IsRectangular;
             float _TestNumber;
             float _TestNumber2;
+            float _TestNumber3;
+            float _TestNumber4;
             float _StepSize;
             float _CameraFarPlane;
             float4x4 _CameraToWorldMatrix;
@@ -121,17 +123,13 @@ Shader "Custom/DepthAndNormalsVisualizer"
                 float3 initialNormal = GetInitialNormal(i.uv);
 
 
-                // Преобразование нормали из пространства вида в мировое пространство
-                float3 normalInWorldSpace = mul((float3x3)unity_CameraToWorld, initialNormal); //_CameraToWorldMatrix = 
-
-                initialNormal = normalInWorldSpace;
-
                 //i have this initialnormal - but i wanna it to be mulriplied by cameras rotation, so in my shader i think, that normal is rotated towards me, even if it is rotated backwards from camera, but camera is facing back. understand? so i can also track correctly the normals, when i rotate camera back:
 
 
                 // Получаем нормаль                
                 float initialDepth = Linear01Depth(tex2D(_CameraDepthTexture, i.uv).r); // Получаем глубину
-                float3 viewRay = (float3(i.uv * 2.0 - 1.0, initialDepth)); // Создаем луч взгляда
+                float2 uvSS = i.uv * 2.0 - 1.0;
+                float3 viewRay = (float3(uvSS, initialDepth)); // Создаем луч взгляда
 
                 //fixed4 x = tex2D(_MainTex, viewRay);return x;
 
@@ -143,37 +141,67 @@ Shader "Custom/DepthAndNormalsVisualizer"
                 //float3 viewRayNormalized = float3(viewRay.x, viewRay.y, viewRay.z);
                 // Определяем, является ли нормаль вертикальной
 
-                float3 viewRayNormalized = viewRay;
+                float3 viewRayNormalized;
                 if (_IsRectangular > 0.5f)
                 {
                     float rectangularThreshhold = 0.9;
 
 
-                    float isVerticalMultiply = abs(initialNormal.y) > rectangularThreshhold ? 0 : 1;
+                    bool isFloorReflection = abs(initialNormal.y) > rectangularThreshhold;
+                    bool isSideWallReflection = abs(initialNormal.x) > rectangularThreshhold;
+                    bool isDeepReflection = abs(initialNormal.z) > rectangularThreshhold;
+
+
+
+
+                    float verticalHorizontalResetValue = 0.02;
+                    float zResetValue = 1;
+                    
+                    float isVerticalMultiply = isFloorReflection ? verticalHorizontalResetValue : 1;                    
                     // Это условие проверяет, насколько "вертикальна" нормаль
-                    float isHorizontalMultiply = abs(initialNormal.x) > rectangularThreshhold ? 0 : 1;
+                    
+                    float isHorizontalMultiply = isSideWallReflection ? verticalHorizontalResetValue : 1;
                     // Это условие проверяет, насколько "X" нормаль
-                    float isDeepMultiply = abs(initialNormal.z) > rectangularThreshhold ? 0 : 1;
+
+                    
+                    float isDeepMultiply = isDeepReflection ? zResetValue : 1;
                     // Это условие проверяет, насколько "Z" нормаль
 
-
+                    viewRayNormalized = viewRay;
                     viewRayNormalized *= float3(isVerticalMultiply, isHorizontalMultiply, isDeepMultiply);
-                    if (abs(initialNormal.y) > rectangularThreshhold)
+
+                    //What are those magic numbers?
+                    float xMultyply = 0.6;
+                    float yMultyply = 0.6;
+                    float zMultyply = 0.6;
+
+
+                    float magicMultiply = (initialDepth+1.0);
+                    
+                    //For floor reflection
+                    if (isFloorReflection)
                     {
-                        viewRayNormalized.y *= _TestNumber;
-                        viewRayNormalized.z *= _TestNumber2;
-                    }
-                    if (abs(initialNormal.x) > rectangularThreshhold)
-                    {
-                        viewRayNormalized.x *= _TestNumber;
-                        viewRayNormalized.z *= _TestNumber2;
-                    }
-                    if (abs(initialNormal.z) > rectangularThreshhold)
-                    {
-                        viewRayNormalized.x *= _TestNumber2;
-                        viewRayNormalized.y *= _TestNumber2;
+                        //viewRayNormalized.y *= yMultyply;
+                        viewRayNormalized.y *= yMultyply * magicMultiply;
                     }
 
+                    //for walls reflection
+                    if (isSideWallReflection)
+                    {
+                        viewRayNormalized.x *= xMultyply  *  magicMultiply;
+                        //viewRayNormalized.z *= zMultyply;
+                    }
+                    if (isDeepReflection)
+                    {
+                        //viewRayNormalized.z *= zMultyply *  magicMultiply;
+                        viewRayNormalized.x *= zMultyply *  magicMultiply;
+                        viewRayNormalized.y *= zMultyply *  magicMultiply;
+                    }
+
+                    if (_TestNumber3 > 0.5f)
+                    {
+                        //viewRayNormalized = normalize(viewRayNormalized);
+                    }
 
                     if (_TestNumber > 0.5f)
                     {
@@ -182,27 +210,7 @@ Shader "Custom/DepthAndNormalsVisualizer"
                 }
                 else
                 {
-                    // Входной вектор: inputVector.x, inputVector.y от -1 до 1, inputVector.z от 0 до 1
-
-                    float3 input_vector = viewRayNormalized;
-                    // Простая аппроксимация для сдвига в зависимости от расстояния до центра
-                    float distanceFromCenter = sqrt(input_vector.x * input_vector.x + input_vector.y * input_vector.y);
-
-                    // Вычисляем сдвиг для x и y
-                    float shiftScale = 0.5; // Масштаб сдвига, подберите подходящее значение
-                    float shiftX = input_vector.x * shiftScale * distanceFromCenter;
-                    float shiftY = input_vector.y * shiftScale * distanceFromCenter;
-
-                    // Для глубины используем линейное уменьшение от 0 до -1, увеличивая "драматичность" с расстоянием
-                    // Можете адаптировать этот масштаб, чтобы глубина уходила дальше в минус, если нужно
-                    float depthShiftScale = 2.0; // Масштаб сдвига глубины
-                    float shiftedDepth = -input_vector.z * depthShiftScale * distanceFromCenter;
-
-                    // Комбинируем результат
-                    float4 transformedVector = float4(input_vector.x + shiftX, input_vector.y + shiftY, shiftedDepth,
-  1.0);
-
-                    viewRayNormalized = transformedVector;
+                    viewRayNormalized = normalize(viewRay);
                 }
 
                 float3 reflectedRay = reflect(viewRayNormalized, initialNormal); // Отражаем луч от поверхности
