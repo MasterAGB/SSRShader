@@ -50,6 +50,7 @@ Shader "Custom/DepthAndNormalsVisualizer"
             int _MaxSteps;
             float _IsRectangular;
             float _TestNumber;
+            float _TestNumber2;
             float _StepSize;
             float _CameraFarPlane;
             float _DepthHit;
@@ -130,12 +131,27 @@ Shader "Custom/DepthAndNormalsVisualizer"
                     float isDeepMultiply = abs(initialNormal.z) > rectangularThreshhold ? 0 : 1;
                     // Это условие проверяет, насколько "Z" нормаль
 
-                    if (abs(initialNormal.y) > rectangularThreshhold)
-                    {
-                    }
+                  
 
                     viewRayNormalized *= float3(isVerticalMultiply, isHorizontalMultiply, isDeepMultiply);
+                    if (abs(initialNormal.y) > rectangularThreshhold)
+                    {
+                        viewRayNormalized.y *=_TestNumber;
+                        viewRayNormalized.z *=_TestNumber2;
+                    }
+                    if (abs(initialNormal.x) > rectangularThreshhold)
+                    {
+                        viewRayNormalized.x *=_TestNumber;
+                        viewRayNormalized.z *=_TestNumber2;
+                    }
+                    if (abs(initialNormal.z) > rectangularThreshhold)
+                    {
+                        viewRayNormalized.x *=_TestNumber2;
+                        viewRayNormalized.y *=_TestNumber2;
+                    }
 
+
+                    
 
                     if (_TestNumber > 0.5f)
                     {
@@ -166,6 +182,15 @@ Shader "Custom/DepthAndNormalsVisualizer"
                     if (currentUV.x < 0.0 || currentUV.x > 1.0 || currentUV.y < 0.0 || currentUV.y > 1.0) break;
 
 
+                    float currentDepthNormal = Linear01Depth(tex2D(_CameraDepthTexture, currentUV.xy).r);
+                    float oneMeterPixelDepth = (255.0 / _ProjectionParams.z) / 255.0; //We dont use FAR_PLANE, stuff is in _ProjectionParams!
+                    float depthOffset = _StepSize * step * reflectedRay.z * oneMeterPixelDepth;
+                    float currentDepth3D = currentDepthNormal  * oneMeterPixelDepth;
+                    float initialDepth3D = initialDepth  * oneMeterPixelDepth;
+                    float assumedDepth3D = initialDepth3D + depthOffset;
+                    float depthDifference = abs(currentDepth3D - assumedDepth3D);
+
+                    
                     // Преобразование UV координат в экранные координаты (в пикселях)
                     float2 initialScreenPos = i.uv * float2(_ScreenParams.x, _ScreenParams.y);
                     float2 currentScreenPos = currentUV * float2(_ScreenParams.x, _ScreenParams.y);
@@ -190,25 +215,20 @@ Shader "Custom/DepthAndNormalsVisualizer"
                     }
 
 
-                    float currentDepth = Linear01Depth(tex2D(_CameraDepthTexture, currentUV.xy).r);
-                    float oneMeterPixelDepth = (255.0 / _CameraFarPlane) / 255.0;
-                    float depthOffset = _StepSize * step * reflectedRay.z * oneMeterPixelDepth;
-                    float assumedDepth = initialDepth + depthOffset;
-                    float depthDifference = abs(currentDepth - assumedDepth);
 
 
                     //HERE We must check, if the Depth at least is not BEHIND the ferlected ray.. So if reflectedRay goes forward, means, we dont accept depth, that is behind..
                     //It will help not to reflect object itself, when the ray reflects right in the camera
                     //Для реализации этой логики в вашем TODO разделе, вам нужно сравнить currentDepth (текущая глубина в точке, куда указывает отраженный луч) с initialDepth (глубина в точке отражения). Однако, просто использовать разницу между этими значениями недостаточно, так как вам также необходимо учесть направление луча относительно камеры.
                     // Проверяем, что текущая глубина больше начальной, что указывает на "передний" объект
-                    if (currentDepth > initialDepth)
+                    if (currentDepthNormal > initialDepth)
                     {
                         if (reflectedRay.z < 0)
                         {
                             continue;
                         }
                     }
-                    else if (currentDepth < initialDepth)
+                    else if (currentDepthNormal < initialDepth)
                     {
                         if (reflectedRay.z > 0)
                         {
@@ -229,7 +249,7 @@ Shader "Custom/DepthAndNormalsVisualizer"
                     {
                         continue;
                     }
-
+                    
 
                     // Если находим поверхность ближе к камере, чем начальная точка + некий порог, считаем, что произошло столкновение
                     if (depthDifference <= _DepthHit)

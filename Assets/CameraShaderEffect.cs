@@ -41,7 +41,8 @@ public class CameraShaderEffect : MonoBehaviour
     [Range(0, 30)] public int _MaxSteps = 30;
 
     public float _StepSize = 0.01f;
-    public float _TestNumber = 0.5f;
+    public float _TestNumber = 1;
+    public float _TestNumber2 = 1;
 
     public bool _IsRectangular = true;
     public bool _CheckBuffer = true;
@@ -73,6 +74,7 @@ public class CameraShaderEffect : MonoBehaviour
         _material.SetFloat("_CameraNearPlane", cam.nearClipPlane);
         _material.SetFloat("_IsRectangular", (_IsRectangular ? 1f : 0f));
         _material.SetFloat("_TestNumber", _TestNumber);
+        _material.SetFloat("_TestNumber2", _TestNumber2);
         if (_CheckBuffer)
         {
             _material.SetTexture("_CameraGBufferTexture0", Shader.GetGlobalTexture("_CameraGBufferTexture0"));
