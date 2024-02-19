@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: 50e902ebac4544a4586576296673a107
+NativeFormatImporter:
+  externalObjects: {}
+  mainObjectFileID: 11400000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 183074
+  packageName: 'Asset Unlock: Kitchen'
+  packageVersion: 1.01
+  assetPath: Assets/Unity Asset Unlocks - Kitchen/Settings/UniversalRenderPipelineGlobalSettings.asset
+  uploadId: 520023

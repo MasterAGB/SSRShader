@@ -1,0 +1,18 @@
+fileFormatVersion: 2
+guid: 879bd7ad7280c164f830fd5be7f93343
+MonoImporter:
+  externalObjects: {}
+  serializedVersion: 2
+  defaultReferences: []
+  executionOrder: 0
+  icon: {instanceID: 0}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 183074
+  packageName: 'Asset Unlock: Kitchen'
+  packageVersion: 1.01
+  assetPath: Assets/Unity Asset Unlocks - Kitchen/Scripts/System/Controller.cs
+  uploadId: 520023

@@ -3,11 +3,6 @@ Shader "Custom/DepthAndNormalsVisualizer"
     Properties
     {
         _MainTex ("Texture", 2D) = "white" {}
-        _MaxSteps ("_MaxSteps", Int) = 10
-        _StepSize ("_StepSize", Float) = 0.1
-        _DepthHit ("_DepthHit", Float) = 0.1
-
-
     }
     SubShader
     {
@@ -47,15 +42,15 @@ Shader "Custom/DepthAndNormalsVisualizer"
 
             int _MaxSteps;
             float _IsRectangular;
+            float _StepSize;
+            float _CameraFarPlane;
+            float _DepthHit;
+
+
             float _TestNumber;
             float _TestNumber2;
             float _TestNumber3;
             float _TestNumber4;
-            float _StepSize;
-            float _CameraFarPlane;
-            float4x4 _CameraToWorldMatrix;
-            float _DepthHit;
-
 
             v2f vert(appdata v)
             {
@@ -95,11 +90,14 @@ Shader "Custom/DepthAndNormalsVisualizer"
                 float3 initialNormal = normalize(tex2D(_CameraNormalsTexture, uv).xyz * 2.0 - 1.0);
 
 
-                // Преобразование нормали из пространства вида в мировое пространство
-                float3 normalInWorldSpace = mul((float3x3)unity_WorldToCamera, initialNormal);
-                //unity_WorldToCamera is unity prefefined const for that - _CameraToWorldMatrix = unity_WorldToCamera
+                if (_TestNumber3 < 0.5)
+                {
+                    // Преобразование нормали из пространства вида в мировое пространство
+                    float3 normalInWorldSpace = mul((float3x3)unity_WorldToCamera, initialNormal);
+                    //unity_WorldToCamera is unity prefefined const for that - _CameraToWorldMatrix = unity_WorldToCamera
 
-                initialNormal = normalInWorldSpace;
+                    initialNormal = normalInWorldSpace;
+                }
                 return initialNormal;
             }
 
@@ -120,6 +118,10 @@ Shader "Custom/DepthAndNormalsVisualizer"
 
                 float3 initialNormal = GetInitialNormal(i.uv);
 
+                if (_TestNumber2 > 0.5)
+                {
+                    return float4(initialNormal, 1);
+                }
 
                 //i have this initialnormal - but i wanna it to be mulriplied by cameras rotation, so in my shader i think, that normal is rotated towards me, even if it is rotated backwards from camera, but camera is facing back. understand? so i can also track correctly the normals, when i rotate camera back:
 
@@ -154,14 +156,14 @@ Shader "Custom/DepthAndNormalsVisualizer"
 
                     float verticalHorizontalResetValue = 0.02;
                     float zResetValue = 1;
-                    
-                    float isVerticalMultiply = isFloorReflection ? verticalHorizontalResetValue : 1;                    
+
+                    float isVerticalMultiply = isFloorReflection ? verticalHorizontalResetValue : 1;
                     // Это условие проверяет, насколько "вертикальна" нормаль
-                    
+
                     float isHorizontalMultiply = isSideWallReflection ? verticalHorizontalResetValue : 1;
                     // Это условие проверяет, насколько "X" нормаль
 
-                    
+
                     float isDeepMultiply = isDeepReflection ? zResetValue : 1;
                     // Это условие проверяет, насколько "Z" нормаль
 
@@ -174,8 +176,8 @@ Shader "Custom/DepthAndNormalsVisualizer"
                     float zMultyply = 0.6;
 
 
-                    float magicMultiply = (initialDepth+1.0);
-                    
+                    float magicMultiply = (initialDepth + 1.0);
+
                     //For floor reflection
                     if (isFloorReflection)
                     {
@@ -186,24 +188,14 @@ Shader "Custom/DepthAndNormalsVisualizer"
                     //for walls reflection
                     if (isSideWallReflection)
                     {
-                        viewRayNormalized.x *= xMultyply  *  magicMultiply;
+                        viewRayNormalized.x *= xMultyply * magicMultiply;
                         //viewRayNormalized.z *= zMultyply;
                     }
                     if (isDeepReflection)
                     {
                         //viewRayNormalized.z *= zMultyply *  magicMultiply;
-                        viewRayNormalized.x *= zMultyply *  magicMultiply;
-                        viewRayNormalized.y *= zMultyply *  magicMultiply;
-                    }
-
-                    if (_TestNumber3 > 0.5f)
-                    {
-                        //viewRayNormalized = normalize(viewRayNormalized);
-                    }
-
-                    if (_TestNumber > 0.5f)
-                    {
-                        //viewRayNormalized = normalize(viewRayNormalized);
+                        viewRayNormalized.x *= zMultyply * magicMultiply;
+                        viewRayNormalized.y *= zMultyply * magicMultiply;
                     }
                 }
                 else
@@ -226,7 +218,7 @@ Shader "Custom/DepthAndNormalsVisualizer"
 
                 int bestStep = 0;
 
-                [unroll(30)]
+                [unroll(80)]
                 for (int step = 1; step <= _MaxSteps; step++)
                 {
                     currentUV += reflectedRay * _StepSize; // Двигаемся по направлению отраженного луча
@@ -316,7 +308,10 @@ Shader "Custom/DepthAndNormalsVisualizer"
                             bestUV = currentUV;
                             bestStep = step;
                         }
-                        //break; // Выходим из цикла, найдено столкновение
+                        if (_TestNumber > 0.5)
+                        {
+                            break; // Выходим из цикла, найдено столкновение
+                        }
                     }
                 }
 

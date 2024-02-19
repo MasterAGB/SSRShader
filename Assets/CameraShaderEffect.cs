@@ -31,7 +31,7 @@ public class CameraShaderEffect : MonoBehaviour
 
 
     [Min(0.001f)] public float _DepthHit = 1;
-    [Range(0, 60)] public int _MaxSteps = 60;
+    [Range(0, 160)] public int _MaxSteps = 160;
 
     public float _StepSize = 0.01f;
     public float _TestNumber = 1;
