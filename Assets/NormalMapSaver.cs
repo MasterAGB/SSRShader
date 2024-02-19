@@ -37,25 +37,30 @@ public class MapSaver : MonoBehaviour
         cam.renderingPath = RenderingPath.DeferredShading;
 
         // Normal Map
-        normalMapRT = new RenderTexture(Screen.width, Screen.height, 24);
+        int width = Screen.width;
+        int height = Screen.height;
+        
+        Debug.Log("Setting up textures: "+width+"x"+height);
+        
+        normalMapRT = new RenderTexture(width, height, 24);
         normalBuffer = new CommandBuffer();
         normalBuffer.Blit(BuiltinRenderTextureType.GBuffer2, normalMapRT);
         cam.AddCommandBuffer(CameraEvent.AfterLighting, normalBuffer);
 
         // Albedo Map
-        albedoMapRT = new RenderTexture(Screen.width, Screen.height, 24);
+        albedoMapRT = new RenderTexture(width, height, 24);
         albedoBuffer = new CommandBuffer();
         albedoBuffer.Blit(BuiltinRenderTextureType.GBuffer0, albedoMapRT);
         cam.AddCommandBuffer(CameraEvent.AfterGBuffer, albedoBuffer);
 
         // Specular Map
-        specularMapRT = new RenderTexture(Screen.width, Screen.height, 24);
+        specularMapRT = new RenderTexture(width, height, 24);
         specularBuffer = new CommandBuffer();
         specularBuffer.Blit(BuiltinRenderTextureType.GBuffer1, specularMapRT);
         cam.AddCommandBuffer(CameraEvent.AfterGBuffer, specularBuffer);
 
         // Depth Map
-        depthMapRT = new RenderTexture(Screen.width, Screen.height, 24);
+        depthMapRT = new RenderTexture(width, height, 24);
         Material depthMaterial = new Material(Shader.Find("Hidden/DepthShader")); // Ensure this shader exists and is correct
         depthBuffer = new CommandBuffer();
         depthBuffer.Blit(null, depthMapRT, depthMaterial);
