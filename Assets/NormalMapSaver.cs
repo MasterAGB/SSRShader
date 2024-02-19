@@ -15,7 +15,10 @@ public class MapSaver : MonoBehaviour
     public bool saveDepthMap = false;
     public bool saveAlbedoMap = false;
     public bool saveSpecularMap = false;
-
+    public bool saveTextureMap = false; // Флаг для сохранения итоговой текстуры
+    
+    
+    private RenderTexture textureMapRT;
     private RenderTexture normalMapRT;
     private RenderTexture depthMapRT;
     private RenderTexture albedoMapRT;
@@ -32,6 +35,26 @@ public class MapSaver : MonoBehaviour
         SetupRenderTexturesAndBuffers();
     }
 
+    
+    void OnRenderImage(RenderTexture src, RenderTexture dest)
+    {
+        if (saveTextureMap)
+        {
+            saveTextureMap = false; // Сбрасываем флаг, чтобы избежать повторного сохранения
+            // Инициализируем RenderTexture, если это необходимо
+            if (textureMapRT == null || textureMapRT.width != src.width || textureMapRT.height != src.height)
+            {
+                if (textureMapRT != null) textureMapRT.Release();
+                textureMapRT = new RenderTexture(src.width, src.height, 0);
+            }
+
+            Graphics.Blit(src, textureMapRT); // Копируем итоговый рендер в textureMapRT
+            StartCoroutine(SaveTextureAfterDelay("TextureMap", textureMapRT));
+        }
+
+        Graphics.Blit(src, dest); // Важно копировать изображение в dest, чтобы оно отображалось на экране
+    }
+    
     void SetupRenderTexturesAndBuffers()
     {
         cam.renderingPath = RenderingPath.DeferredShading;
