@@ -38,6 +38,7 @@ public class CameraShaderEffect : MonoBehaviour
     public float _TestNumber2 = 1;
     public float _TestNumber3 = 1;
     public float _TestNumber4 = 0;
+    public Vector3 _TestVector3 = new Vector3(0,0,0);
 
     public bool _IsRectangular = true;
     public bool _CheckBuffer = true;
@@ -71,6 +72,7 @@ public class CameraShaderEffect : MonoBehaviour
         _material.SetFloat("_TestNumber2", _TestNumber2);
         _material.SetFloat("_TestNumber3", _TestNumber3);
         _material.SetFloat("_TestNumber4", _TestNumber4);
+        _material.SetVector("_TestVector3", _TestVector3);
         if (_CheckBuffer)
         {
             _material.SetTexture("_CameraGBufferTexture0", Shader.GetGlobalTexture("_CameraGBufferTexture0"));
@@ -91,6 +93,21 @@ public class CameraShaderEffect : MonoBehaviour
         _material.SetMatrix("_ViewProjMatrix", (cam.projectionMatrix * cam.worldToCameraMatrix));
 
         _material.SetMatrix("_CameraToWorldMatrix", cam.worldToCameraMatrix.inverse);
+
+
+        float size = _TestNumber;
+        
+        var screenSpaceProjectionMatrix = new Matrix4x4();
+        screenSpaceProjectionMatrix.SetRow(0, new Vector4(size * 0.5f, 0f, 0f, size * 0.5f));
+        screenSpaceProjectionMatrix.SetRow(1, new Vector4(0f, size * 0.5f, 0f, size * 0.5f));
+        screenSpaceProjectionMatrix.SetRow(2, new Vector4(0f, 0f, 1f, 0f));
+        screenSpaceProjectionMatrix.SetRow(3, new Vector4(0f, 0f, 0f, 1f));
+
+        var projectionMatrix = GL.GetGPUProjectionMatrix(cam.projectionMatrix, false);
+        screenSpaceProjectionMatrix *= projectionMatrix;
+        _material.SetMatrix("_ScreenSpaceProjectionMatrix", screenSpaceProjectionMatrix);
+        
+        
     }
 
     void OnRenderImage(RenderTexture src, RenderTexture dest)
